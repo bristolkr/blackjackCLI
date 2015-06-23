@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+# test that executable works by typing ./blackjack
+# puts "does this unit have a soul?"
+
+require 'net/http'
+require 'json'
+ 
+BLACKJACK_API_HOST = 'pure-forest-blackjack.herokuapp.com'
+ 
+http = Net::HTTP.new(BLACKJACK_API_HOST)
+
+# separation of HTTP and JSON from CLI in Game class
+class Blackjack
+end
+
+# prompt for user's name, hit/stay
+class Game
+end
+
+Game.run
