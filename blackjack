@@ -12,10 +12,38 @@ http = Net::HTTP.new(BLACKJACK_API_HOST)
 
 # separation of HTTP and JSON from CLI in Game class
 class Blackjack
+
+	def initialize
+		@name = name
+		@res = http.post("/games", "game[name]=#{name}")
+		
+		@game = JSON.parse(res.body)
+		
+		@id = game["id"]
+		@game = JSON.parse(http.patch("/games/#{id}/hit", '').body)
+
+	end
+
+	
+
+	
+
 end
 
-# prompt for user's name, hit/stay
-class Game
+class Game < Blackjack
+
+	# prompt for user's name
+	def initialize
+		puts "What's your name? "
+		@name = gets.chomp
+	end
+
+	# prompt for hit/stay
+	def stay_hit
+		puts "Would you like to hit or stay? "
+		@stay_hit = gets.chomp
+	end
+
 end
 
-Game.run
+Game.new
