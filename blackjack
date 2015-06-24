@@ -1,49 +1,108 @@
 #!/usr/bin/env ruby
 
-# test that executable works by typing ./blackjack
-# puts "does this unit have a soul?"
-
 require 'net/http'
 require 'json'
- 
-BLACKJACK_API_HOST = 'pure-forest-blackjack.herokuapp.com'
- 
-http = Net::HTTP.new(BLACKJACK_API_HOST)
+require 'cgi'
 
-# separation of HTTP and JSON from CLI in Game class
 class Blackjack
+	API_HOST = 'pure-forest-blackjack.herokuapp.com'
 
-	def initialize
-		@name = name
-		@res = http.post("/games", "game[name]=#{name}")
-		
-		@game = JSON.parse(res.body)
-		
-		@id = game["id"]
-		@game = JSON.parse(http.patch("/games/#{id}/hit", '').body)
-
+	attr :name, :winner, :player_hand, :dealer_hand, :player_score, :dealer_score
+	
+	def initialize(player_name)
+		@http = Net::HTTP.new(API_HOST)
+		res = @http.post('/games', "game[name]=#{CGI.escape(player_name)}")
+		set_game parse(res)
 	end
 
-	
+	def hit!
+		set_game parse(@http.patch("/games/#{@id}/hit", ''))
+	end
 
-	
+	def stay!
+		set_game parse(@http.patch("/games/#{@id}/stay", ''))
+	end
 
+	private
+
+	def set_game(game)
+		@id 					= game["id"]
+		@name 				= game["name"]
+		@dealer_hand 	= game["dealer_hand"]
+		@dealer_score = game["dealer_score"]
+		@player_hand 	= game["player_hand"]
+		@player_score = game["player_score"]
+		@winner 			= game["winner"]
+	end
+
+	def parse(response)
+		JSON.parse(response.body)
+	end
 end
 
-class Game < Blackjack
+class Game
 
-	# prompt for user's name
 	def initialize
-		puts "What's your name? "
-		@name = gets.chomp
+		print "What's your name? "
+		@blackjack = Blackjack.new(gets.chomp)	
+
+		puts @blackjack.inspect
+
+		until @blackjack.winner
+			puts "\n\n-------------"
+			play
+		end
+
+		show_hand(true)
+
+		winner = @blackjack.winner == "player" ? @blackjack.name : "The dealer"
+		
+		puts "#{winner} wins!"
 	end
 
-	# prompt for hit/stay
-	def stay_hit
-		puts "Would you like to hit or stay? "
-		@stay_hit = gets.chomp
+	def play
+		show_hand
+		get_player_move
 	end
 
+	def show_hand(reveal = false)
+		puts "{@blackjack.name}, your hand contains: "
+		@blackjack.player_hand.each do |card|
+				puts "  " + card
+		end
+		
+		puts "{@blackjack.name}, your hand is worth #{@blackjack.player_score}."
+		puts "\n\n"
+			
+		if reveal
+			puts "The dealer reveals his hand: "
+			@blackjack.dealer_hand.each do |card|
+				puts "  " + card
+			end
+				
+			puts "The dealer's hand is worth #{@blackjack.dealer_score}"
+		else 
+			puts "The dealer reveals one of his #{@blackjack.dealer_hand.count} cards: "
+			puts "  " + @blackjack.dealer_hand.first
+		end
+
+		puts "\n\n"
+	end
+
+	def get_player_move
+		print "#{@blackjack.name}, would you like to hit or stay? "
+		play = gets.chomp
+
+		case play
+			when /^h/i
+				@blackjack.hit!
+			when /^s/i
+				@blackjack.stay!
+			else
+				puts "Wat?"
+				get_player_move
+		end
+	end
 end
 
 Game.new
